@@ -1,0 +1,10 @@
+{
+  "name": "api-server-runtime",
+  "private": true,
+  "type": "module",
+  "comment": "Runtime-only deps that esbuild leaves external (they read sibling files and can't be bundled). Everything else is bundled into dist/index.mjs.",
+  "dependencies": {
+    "mammoth": "^1.12.0",
+    "pdf-parse": "^2.4.5"
+  }
+}
