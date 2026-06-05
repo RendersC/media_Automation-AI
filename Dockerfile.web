@@ -1,0 +1,22 @@
+# syntax=docker/dockerfile:1
+
+# ---- build stage: vite build of the React frontend ----
+FROM node:24-bookworm-slim AS build
+WORKDIR /app
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
+COPY . .
+# See Dockerfile.api: prebuilt native binaries, skip the build-approval gate.
+RUN corepack pnpm install --frozen-lockfile --ignore-scripts
+# vite.config requires PORT and BASE_PATH at build time; NODE_ENV=production
+# disables the Replit-only dev plugins.
+ENV NODE_ENV=production \
+    PORT=8080 \
+    BASE_PATH=/
+RUN corepack pnpm --filter @workspace/media-analytics run build
+
+# ---- runtime stage: static files served by nginx, /api proxied to the API ----
+FROM nginx:alpine AS runtime
+COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/artifacts/media-analytics/dist/public /usr/share/nginx/html
+EXPOSE 80

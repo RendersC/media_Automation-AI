@@ -1,0 +1,62 @@
+name: gosanalitika-media
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpass}
+      POSTGRES_DB: ${POSTGRES_DB:-gosanalitika}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB:-gosanalitika}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  # One-shot: applies the Drizzle schema, then exits. Reuses the API build stage
+  # (which has the full workspace + drizzle-kit installed).
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      target: build
+    command: ["corepack", "pnpm", "--filter", "@workspace/db", "run", "push"]
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-devpass}@db:5432/${POSTGRES_DB:-gosanalitika}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-devpass}@db:5432/${POSTGRES_DB:-gosanalitika}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required - set it in .env}
+      PORT: "8080"
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${API_PORT:-8092}:8080"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-8082}:80"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

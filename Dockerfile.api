@@ -1,0 +1,35 @@
+# syntax=docker/dockerfile:1
+
+# ---- build stage: install workspace deps and bundle the API ----
+FROM node:24-bookworm-slim AS build
+WORKDIR /app
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
+# Full workspace context (see .dockerignore). pnpm resolves the workspace graph.
+COPY . .
+# --ignore-scripts: native deps (esbuild, etc.) ship prebuilt platform binaries,
+# so no build scripts are needed; this also avoids pnpm's interactive build-approval
+# gate that fails non-interactive CI installs.
+RUN corepack pnpm install --frozen-lockfile --ignore-scripts
+# esbuild bundles the server into dist/ (single .mjs + pino worker files)
+RUN node artifacts/api-server/build.mjs
+
+# ---- runtime stage: slim image with ffmpeg + yt-dlp ----
+FROM node:24-bookworm-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production \
+    PORT=8080
+# ffmpeg (audio extraction) and yt-dlp (YouTube download) are spawned at runtime.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ffmpeg curl ca-certificates \
+ && curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o /usr/local/bin/yt-dlp \
+ && chmod a+rx /usr/local/bin/yt-dlp \
+ && apt-get purge -y --auto-remove curl \
+ && rm -rf /var/lib/apt/lists/*
+# esbuild externalizes mammoth & pdf-parse (they read sibling files), so install
+# just those at runtime — everything else is bundled into dist.
+COPY artifacts/api-server/docker-runtime-package.json ./package.json
+RUN npm install --omit=dev && npm cache clean --force
+COPY --from=build /app/artifacts/api-server/dist ./dist
+EXPOSE 8080
+CMD ["node", "--enable-source-maps", "dist/index.mjs"]
