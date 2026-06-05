@@ -1,0 +1,13 @@
+.git
+node_modules
+**/node_modules
+dist
+**/dist
+**/.tsbuildinfo
+.runtest
+.env
+*.local.env
+git-publish.bat
+**/*.log
+.vscode
+.idea
