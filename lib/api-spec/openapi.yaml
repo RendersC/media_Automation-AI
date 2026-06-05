@@ -1,0 +1,447 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Media Analytics Platform API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: directories
+    description: Thematic directories management
+  - name: sessions
+    description: Processing sessions
+  - name: reports
+    description: Report generation
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /directories:
+    get:
+      operationId: listDirectories
+      tags: [directories]
+      summary: List all thematic directories
+      responses:
+        "200":
+          description: List of directories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Directory"
+    post:
+      operationId: createDirectory
+      tags: [directories]
+      summary: Upload and parse a thematic directory document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DirectoryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Directory"
+
+  /directories/{id}:
+    get:
+      operationId: getDirectory
+      tags: [directories]
+      summary: Get a directory by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Directory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Directory"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteDirectory
+      tags: [directories]
+      summary: Delete a directory and its categories
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /directories/{id}/categories:
+    get:
+      operationId: listCategories
+      tags: [directories]
+      summary: List all categories in a directory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+
+  /sessions:
+    get:
+      operationId: listSessions
+      tags: [sessions]
+      summary: List processing sessions
+      responses:
+        "200":
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+    post:
+      operationId: createSession
+      tags: [sessions]
+      summary: Create a new processing session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{id}:
+    get:
+      operationId: getSession
+      tags: [sessions]
+      summary: Get a session by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Session with segments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionDetail"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteSession
+      tags: [sessions]
+      summary: Delete a session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /sessions/{id}/process:
+    post:
+      operationId: processSession
+      tags: [sessions]
+      summary: Process session with AI classification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Processing result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionDetail"
+
+  /sessions/{id}/segments/{segmentId}:
+    patch:
+      operationId: updateSegment
+      tags: [sessions]
+      summary: Update a segment (manual category correction)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: segmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SegmentUpdate"
+      responses:
+        "200":
+          description: Updated segment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Segment"
+
+  /sessions/{id}/export:
+    get:
+      operationId: exportReport
+      tags: [reports]
+      summary: Export session report as Excel file (base64)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Excel file as base64
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportResult"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    Directory:
+      type: object
+      required: [id, name, year, categoriesCount, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        year:
+          type: integer
+        categoriesCount:
+          type: integer
+        createdAt:
+          type: string
+
+    DirectoryInput:
+      type: object
+      required: [name, year, rawText]
+      properties:
+        name:
+          type: string
+        year:
+          type: integer
+        rawText:
+          type: string
+          description: Full text of the directory document
+
+    Category:
+      type: object
+      required: [id, directoryId, code, title]
+      properties:
+        id:
+          type: integer
+        directoryId:
+          type: integer
+        code:
+          type: ["string", "null"]
+        title:
+          type: string
+
+    Session:
+      type: object
+      required: [id, programName, broadcastDate, status, segmentsCount, createdAt]
+      properties:
+        id:
+          type: integer
+        programName:
+          type: string
+        broadcastDate:
+          type: string
+        status:
+          type: string
+          enum: [draft, processing, transcribing, done, error]
+        progressMessage:
+          type: ["string", "null"]
+          description: Human-readable progress or error message during long-running processing
+        directoryId:
+          type: ["integer", "null"]
+        segmentsCount:
+          type: integer
+        createdAt:
+          type: string
+
+    SessionInput:
+      type: object
+      properties:
+        programName:
+          type: ["string", "null"]
+          description: Program name. Optional — in the unified (вёрстка + video) flow the AI derives it from the script and video context.
+        broadcastDate:
+          type: ["string", "null"]
+          description: Broadcast date (ISO). Optional — in the unified flow it is extracted from the video file name.
+        directoryId:
+          type: ["integer", "null"]
+        broadcastText:
+          type: ["string", "null"]
+          description: Raw broadcast script text
+        youtubeUrl:
+          type: ["string", "null"]
+          description: Optional reference link to the source video
+        transcriptText:
+          type: ["string", "null"]
+          description: Subtitles/transcript (SRT, WebVTT, or timecoded text) to be auto-segmented into key events by AI
+        videoUrl:
+          type: ["string", "null"]
+          description: Direct video file URL (e.g. .mp4) that the platform downloads, transcribes (speech-to-text with timecodes) and auto-segments into key events
+
+    SessionDetail:
+      type: object
+      required: [id, programName, broadcastDate, status, segments, createdAt]
+      properties:
+        id:
+          type: integer
+        programName:
+          type: string
+        broadcastDate:
+          type: string
+        status:
+          type: string
+          enum: [draft, processing, transcribing, done, error]
+        progressMessage:
+          type: ["string", "null"]
+          description: Human-readable progress or error message during long-running processing
+        directoryId:
+          type: ["integer", "null"]
+        broadcastText:
+          type: ["string", "null"]
+        youtubeUrl:
+          type: ["string", "null"]
+        videoUrl:
+          type: ["string", "null"]
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Segment"
+        createdAt:
+          type: string
+
+    Segment:
+      type: object
+      required: [id, sessionId, title, timeStart, timeEnd, durationMinutes, source, categoryIds, categories]
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: integer
+        title:
+          type: string
+          description: Topic / key thought
+        speaker:
+          type: ["string", "null"]
+        timeStart:
+          type: string
+          description: "HH:MM:SS or MM:SS"
+        timeEnd:
+          type: string
+        durationMinutes:
+          type: number
+        source:
+          type: string
+          enum: [broadcast, youtube, video]
+        categoryIds:
+          type: array
+          items:
+            type: integer
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/SegmentCategory"
+        aiSuggested:
+          type: boolean
+        manuallyEdited:
+          type: boolean
+
+    SegmentCategory:
+      type: object
+      required: [id, title]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+
+    SegmentUpdate:
+      type: object
+      properties:
+        categoryIds:
+          type: array
+          items:
+            type: integer
+        title:
+          type: ["string", "null"]
+        speaker:
+          type: ["string", "null"]
+
+    ExportResult:
+      type: object
+      required: [filename, base64]
+      properties:
+        filename:
+          type: string
+        base64:
+          type: string
