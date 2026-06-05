@@ -1,0 +1,4 @@
+- [Drizzle push TTY](drizzle-push-tty.md) — column rename/type changes break `push` (no TTY); apply via executeSql ALTER first, then push syncs.
+- [TЗ Excel format](tz-excel-format.md) — the report Excel must be EXACTLY 5 columns per ТЗ §4; AI assigns one-or-many directions strictly from the session's directory.
+- [YouTube extraction blocked](youtube-extraction-blocked.md) — server-side YT caption/audio extraction impossible from this IP; product ingests pasted .srt/.vtt subtitles instead.
+- [Unified session field sources](unified-session-field-sources.md) — which of справочник/вёрстка/видео feeds each of the 5 ТЗ columns (user-confirmed) + merge fallback rule.
