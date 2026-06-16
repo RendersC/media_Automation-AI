@@ -39,6 +39,11 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required - set it in .env}
       PORT: "8080"
       NODE_ENV: production
+      # First admin, seeded on startup if it doesn't exist yet
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL is required - set it in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required - set it in .env}
+      # Set to true only when serving over HTTPS (secure cookies)
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     depends_on:
       db:
         condition: service_healthy
