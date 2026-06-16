@@ -49,7 +49,7 @@ export default function NewSession() {
       return;
     }
     if (!videoUrl.trim()) {
-      toast({ title: "Ошибка", description: "Вставьте ссылку на видео (файл .mp4 или YouTube)", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Вставьте прямую ссылку на видеофайл (.mp4)", variant: "destructive" });
       return;
     }
 
@@ -195,23 +195,21 @@ export default function NewSession() {
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Link2 className="w-4 h-4" />
-                Ссылка на видео
+                Прямая ссылка на видеофайл
               </Label>
               <Input
                 value={videoUrl}
                 onChange={e => setVideoUrl(e.target.value)}
-                placeholder="https://1tv.kz/.../04-06-26-EFIR.mp4  или  https://youtube.com/watch?v=…"
+                placeholder="https://1tv.kz/wp-content/uploads/.../04-06-26-EFIR.mp4"
               />
               <p className="text-xs text-muted-foreground">
-                Подойдёт прямая ссылка на файл (.mp4 и потоки) или ссылка на YouTube. Из видео платформа
-                берёт хронометраж сюжетов (по расшифровке речи) и дату выхода (из имени файла или даты
-                загрузки на YouTube). Обработка часового эфира занимает несколько минут.
+                Из видео платформа берёт хронометраж сюжетов (по расшифровке речи) и дату выхода в эфир
+                (из имени файла). Обработка часового эфира занимает несколько минут.
               </p>
               <div className="flex items-start gap-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>
-                  YouTube загружается через yt-dlp; для некоторых видео (приватные, с ограничениями или
-                  при блокировке со стороны YouTube) загрузка может не сработать — тогда используйте прямую ссылку на файл.
+                  Нужна именно прямая ссылка на файл (заканчивается на .mp4), а не страница сайта.
                 </span>
               </div>
             </div>
