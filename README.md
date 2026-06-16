@@ -97,6 +97,32 @@ corepack pnpm --filter @workspace/api-spec run codegen   # регенераци�
 
 ---
 
+## Деплой: фронтенд на Vercel + бэкенд на Railway
+
+Репозиторий — монорепо (фронт и бэк используют общий код `lib/*`), поэтому разносим не папками, а **двумя выкладками** из одного репозитория.
+
+### Бэкенд → Railway
+1. New Project → **Deploy from GitHub repo** → выбери репозиторий. Railway подхватит `railway.json` (сборка по `Dockerfile.railway`).
+2. В проект добавь **Database → PostgreSQL**.
+3. В сервисе бэкенда (Variables) задай:
+   - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` (ссылка на БД Railway)
+   - `OPENAI_API_KEY` = свой ключ
+   - `ADMIN_EMAIL`, `ADMIN_PASSWORD` = первый администратор
+   - `COOKIE_SECURE=true`, `COOKIE_SAMESITE=none`
+   - `CORS_ORIGINS=https://<твой-фронт>.vercel.app` (добавишь после деплоя фронта)
+   - `PORT` задаётся Railway автоматически — трогать не нужно.
+4. Деплой. Схема БД применится при старте автоматически. Открой публичный URL сервиса → `…/api/healthz` должен вернуть `{"status":"ok"}`.
+
+### Фронтенд → Vercel
+1. New Project → импортируй тот же репозиторий. Vercel подхватит `vercel.json` (сборка фронта из монорепо).
+2. В Environment Variables задай:
+   - `VITE_API_URL=https://<твой-бэкенд>.up.railway.app`
+3. Деплой. Затем впиши полученный домен Vercel в `CORS_ORIGINS` бэкенда на Railway.
+
+> Фронт и бэк на разных доменах → авторизация работает на cross-site cookie (`SameSite=None; Secure`), поэтому HTTPS (он есть и на Vercel, и на Railway) и точный `CORS_ORIGINS` обязательны.
+
+---
+
 ## Стек
 
 - **Монорепозиторий:** pnpm workspaces, Node.js 24, TypeScript 5.9

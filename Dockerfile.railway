@@ -1,0 +1,24 @@
+# syntax=docker/dockerfile:1
+# Single-stage image for Railway: builds the API, keeps the workspace so it can
+# apply the DB schema (drizzle push, idempotent) on startup, then runs the server.
+# Railway injects PORT and the Postgres DATABASE_URL.
+
+FROM node:24-bookworm-slim
+WORKDIR /app
+ENV NODE_ENV=production \
+    COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+
+# ffmpeg (audio extraction) + yt-dlp (YouTube download), spawned at runtime.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ffmpeg curl ca-certificates \
+ && curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o /usr/local/bin/yt-dlp \
+ && chmod a+rx /usr/local/bin/yt-dlp \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN corepack enable
+COPY . .
+RUN corepack pnpm install --frozen-lockfile --ignore-scripts
+RUN node artifacts/api-server/build.mjs
+
+# Apply the schema (idempotent — "No changes detected" if already applied), then start.
+CMD ["sh", "-c", "corepack pnpm --filter @workspace/db run push && node --enable-source-maps artifacts/api-server/dist/index.mjs"]
