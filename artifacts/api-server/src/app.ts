@@ -26,7 +26,19 @@ app.use(
     },
   }),
 );
-app.use(cors());
+// Allow the configured frontend origin(s) to call the API with cookies.
+// CORS_ORIGINS = comma-separated list (e.g. your Vercel URL). When unset, the
+// request origin is reflected — fine for same-origin (Docker/local) use.
+const corsOrigins = (process.env.CORS_ORIGINS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+app.use(
+  cors({
+    origin: corsOrigins.length > 0 ? corsOrigins : true,
+    credentials: true,
+  }),
+);
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

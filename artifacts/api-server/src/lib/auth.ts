@@ -74,12 +74,21 @@ export async function getUserByToken(token: string): Promise<AuthUser | null> {
   return toAuthUser(user);
 }
 
-/** Cookie options for the session cookie. Secure flag enabled via COOKIE_SECURE=true (HTTPS). */
+/**
+ * Cookie options for the session cookie.
+ * - COOKIE_SAMESITE: "lax" (default), "strict" or "none". Use "none" when the
+ *   frontend is on a different site (e.g. Vercel) than the API (e.g. Railway).
+ * - COOKIE_SECURE: "true" over HTTPS. SameSite=None always implies Secure.
+ */
 export function sessionCookieOptions(expires?: Date) {
+  const sameSiteEnv = process.env.COOKIE_SAMESITE?.toLowerCase();
+  const sameSite =
+    sameSiteEnv === "none" || sameSiteEnv === "strict" || sameSiteEnv === "lax" ? sameSiteEnv : "lax";
+  const secure = process.env.COOKIE_SECURE === "true" || sameSite === "none";
   return {
     httpOnly: true,
-    sameSite: "lax" as const,
-    secure: process.env.COOKIE_SECURE === "true",
+    sameSite: sameSite as "lax" | "strict" | "none",
+    secure,
     path: "/",
     ...(expires ? { expires } : {}),
   };
