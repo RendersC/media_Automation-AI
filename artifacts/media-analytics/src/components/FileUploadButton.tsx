@@ -8,6 +8,9 @@ interface FileUploadButtonProps {
   label?: string;
 }
 
+// Same base as the rest of the API client; empty → same-origin (local/Docker).
+const API_BASE = import.meta.env.VITE_API_URL?.trim() || "";
+
 const ACCEPTED = ".txt,.pdf,.docx";
 const ACCEPT_MIME = [
   "text/plain",
@@ -33,7 +36,11 @@ export function FileUploadButton({ onTextExtracted, label = "Загрузить 
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("/api/upload-document", { method: "POST", body: formData });
+      const res = await fetch(`${API_BASE}/api/upload-document`, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error((err as { error?: string }).error ?? "Ошибка сервера");
