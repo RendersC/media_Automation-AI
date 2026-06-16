@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { ensureAdmin } from "./lib/auth";
 
 const rawPort = process.env["PORT"];
 
@@ -15,11 +16,22 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
+async function start(): Promise<void> {
+  // Seed the initial admin (from ADMIN_EMAIL/ADMIN_PASSWORD) before serving.
+  try {
+    await ensureAdmin();
+  } catch (err) {
+    logger.error({ err }, "Initial admin bootstrap failed");
   }
 
-  logger.info({ port }, "Server listening");
-});
+  app.listen(port, (err) => {
+    if (err) {
+      logger.error({ err }, "Error listening on port");
+      process.exit(1);
+    }
+
+    logger.info({ port }, "Server listening");
+  });
+}
+
+void start();
