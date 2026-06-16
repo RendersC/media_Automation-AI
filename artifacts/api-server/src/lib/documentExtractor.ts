@@ -20,12 +20,17 @@ export async function extractTextFromBuffer(
   }
 
   if (mimetype === "application/pdf" || ext === "pdf") {
-    // Dynamic import to avoid ESM/CJS bundling issues; handle both CJS default and ESM named exports
+    // pdf-parse v2 has a class-based API (PDFParse, backed by pdfjs), not the
+    // v1 callable. Dynamic import keeps it external to the esbuild bundle.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mod = (await import("pdf-parse")) as any;
-    const pdfParse: (buf: Buffer) => Promise<{ text: string }> = mod.default ?? mod;
-    const data = await pdfParse(buffer);
-    return data.text;
+    const { PDFParse } = (await import("pdf-parse")) as any;
+    const parser = new PDFParse({ data: new Uint8Array(buffer) });
+    try {
+      const result = await parser.getText();
+      return result.text as string;
+    } finally {
+      await parser.destroy();
+    }
   }
 
   throw new Error(`Неподдерживаемый формат файла: ${ext || mimetype}`);
