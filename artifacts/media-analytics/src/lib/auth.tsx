@@ -15,7 +15,8 @@ export interface ManagedUser extends AuthUser {
   createdAt: string;
 }
 
-const API = "/api";
+// Same-origin by default; set VITE_API_URL when the backend is on another origin.
+const API = (import.meta.env.VITE_API_URL?.trim() || "") + "/api";
 
 /** fetch wrapper: same-origin cookies, JSON in/out, throws Error(message) on failure. */
 async function req<T>(path: string, options: RequestInit = {}): Promise<T> {
