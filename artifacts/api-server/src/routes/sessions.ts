@@ -264,19 +264,19 @@ async function buildSessionDetail(sessionId: number) {
 
   // Collect all referenced category ids and resolve their titles in one query
   const allCategoryIds = [...new Set(segments.flatMap((s) => s.categoryIds))];
-  const categoryTitleMap = new Map<number, string>();
+  const categoryMap = new Map<number, { code: string | null; title: string }>();
   if (allCategoryIds.length > 0) {
     const cats = await db
       .select()
       .from(categoriesTable)
       .where(inArray(categoriesTable.id, allCategoryIds));
-    for (const c of cats) categoryTitleMap.set(c.id, c.title);
+    for (const c of cats) categoryMap.set(c.id, { code: c.code ?? null, title: c.title });
   }
 
   const enrichedSegments = segments.map((seg) => {
     const categories = seg.categoryIds
-      .filter((cid) => categoryTitleMap.has(cid))
-      .map((cid) => ({ id: cid, title: categoryTitleMap.get(cid)! }));
+      .filter((cid) => categoryMap.has(cid))
+      .map((cid) => ({ id: cid, code: categoryMap.get(cid)!.code, title: categoryMap.get(cid)!.title }));
     return {
       id: seg.id,
       sessionId: seg.sessionId,

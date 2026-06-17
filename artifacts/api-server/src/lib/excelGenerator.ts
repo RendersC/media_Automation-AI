@@ -6,7 +6,7 @@ interface Segment {
   timeStart: string;
   timeEnd: string;
   durationMinutes: number;
-  categories: Array<{ id: number; title: string }>;
+  categories: Array<{ id: number; code?: string | null; title: string }>;
   aiSuggested: boolean;
   manuallyEdited: boolean;
   source: string;
@@ -65,7 +65,7 @@ export async function generateExcel(session: SessionDetail): Promise<{ buffer: B
     const topicCell = seg.speaker ? `${seg.title} / ${seg.speaker}` : seg.title;
     const categoryCell =
       seg.categories.length > 0
-        ? seg.categories.map((c) => c.title).join("\n")
+        ? seg.categories.map((c) => (c.code ? `${c.code}. ${c.title}` : c.title)).join("\n")
         : "—";
     const row = sheet.addRow({
       category: categoryCell,
