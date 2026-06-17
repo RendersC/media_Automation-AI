@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download, Edit2, Check, RefreshCw, Tag, Plus } from "lucide-react";
+import { Download, Edit2, Check, RefreshCw, Tag, Plus, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SessionDetail() {
@@ -26,8 +26,16 @@ export default function SessionDetail() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: session, isLoading } = useGetSession(id, { 
-    query: { enabled: !!id, queryKey: getGetSessionQueryKey(id) } 
+  const { data: session, isLoading } = useGetSession(id, {
+    query: {
+      enabled: !!id,
+      queryKey: getGetSessionQueryKey(id),
+      // Keep polling while the эфир is still being transcribed/classified.
+      refetchInterval: (query) => {
+        const status = query.state.data?.status;
+        return status === "done" || status === "error" ? false : 3000;
+      },
+    }
   });
 
   const dirId = session?.directoryId || 0;
@@ -146,6 +154,30 @@ export default function SessionDetail() {
           </Button>
         </div>
       </div>
+
+      {session.status === 'error' && (
+        <div className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/10 p-4">
+          <AlertCircle className="w-5 h-5 shrink-0 text-destructive mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-destructive">Не удалось обработать эфир</p>
+            <p className="text-sm text-muted-foreground">
+              {session.progressMessage ?? "Ошибка обработки видео. Проверьте прямую ссылку на видеофайл (.mp4) и повторите."}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {(session.status === 'transcribing' || session.status === 'processing') && (
+        <div className="flex items-start gap-3 rounded-md border border-primary/40 bg-primary/10 p-4">
+          <Loader2 className="w-5 h-5 shrink-0 text-primary mt-0.5 animate-spin" />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-primary">Идёт обработка эфира…</p>
+            <p className="text-sm text-muted-foreground">
+              {session.progressMessage ?? "Платформа расшифровывает речь и размечает сюжеты. Обработка часового эфира занимает несколько минут."}
+            </p>
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
