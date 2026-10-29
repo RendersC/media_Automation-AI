@@ -311,24 +311,23 @@ async function buildSessionDetail(sessionId: number) {
 router.get("/sessions", async (_req, res): Promise<void> => {
   const sessions = await db.select().from(sessionsTable).orderBy(sessionsTable.createdAt);
 
-  const result = await Promise.all(
-    sessions.map(async (s) => {
-      const [{ count: cnt }] = await db
-        .select({ count: count() })
-        .from(segmentsTable)
-        .where(eq(segmentsTable.sessionId, s.id));
-      return {
-        id: s.id,
-        programName: s.programName,
-        broadcastDate: s.broadcastDate,
-        status: s.status,
-        progressMessage: s.progressMessage ?? null,
-        directoryId: s.directoryId ?? null,
-        segmentsCount: Number(cnt),
-        createdAt: s.createdAt.toISOString(),
-      };
-    })
-  );
+  // One grouped count instead of a query per session.
+  const counts = await db
+    .select({ sessionId: segmentsTable.sessionId, count: count() })
+    .from(segmentsTable)
+    .groupBy(segmentsTable.sessionId);
+  const countBySession = new Map(counts.map((c) => [c.sessionId, Number(c.count)]));
+
+  const result = sessions.map((s) => ({
+    id: s.id,
+    programName: s.programName,
+    broadcastDate: s.broadcastDate,
+    status: s.status,
+    progressMessage: s.progressMessage ?? null,
+    directoryId: s.directoryId ?? null,
+    segmentsCount: countBySession.get(s.id) ?? 0,
+    createdAt: s.createdAt.toISOString(),
+  }));
 
   res.json(result);
 });
@@ -520,6 +519,12 @@ router.post("/sessions/:id/process", async (req, res): Promise<void> => {
   const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.id, params.data.id));
   if (!session) {
     res.status(404).json({ error: "Session not found" });
+    return;
+  }
+  // A background video job owns the session until it finishes; re-classifying
+  // now would flip it to "done" while segments are still being inserted.
+  if (session.status === "transcribing" || session.status === "processing") {
+    res.status(409).json({ error: "Сессия ещё обрабатывается, дождитесь завершения" });
     return;
   }
 

@@ -1,10 +1,6 @@
-import OpenAI from "openai";
+import { openai, MODELS } from "./openai";
 import { logger } from "./logger";
 import { type TranscriptCue, secondsToHHMMSS } from "./transcriptParser";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export interface TranscriptSegment {
   title: string;
@@ -138,7 +134,7 @@ ${transcript}
 Ответь СТРОГО в формате JSON без пояснений: {"segments": [{"title": "...", "timeStart": "ЧЧ:ММ:СС", "timeEnd": "ЧЧ:ММ:СС", "speaker": "..." | null}]}.`;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: MODELS.mini,
     max_tokens: 4000,
     temperature: 0.2,
     response_format: { type: "json_object" },

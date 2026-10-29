@@ -2,13 +2,9 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import OpenAI from "openai";
+import { openai, MODELS } from "./openai";
 import { logger } from "./logger";
 import type { TranscriptCue } from "./transcriptParser";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 /** Audio chunk length in seconds. At 64 kbps mono ~= 4.8 MB per chunk, safely under Whisper's 25 MB limit. */
 const CHUNK_SECONDS = 600;
@@ -171,7 +167,7 @@ export async function transcribeVideo(
 
       const resp = (await openai.audio.transcriptions.create({
         file: fs.createReadStream(filePath),
-        model: "whisper-1",
+        model: MODELS.transcribe,
         response_format: "verbose_json",
         timestamp_granularities: ["segment"],
         language: "ru",

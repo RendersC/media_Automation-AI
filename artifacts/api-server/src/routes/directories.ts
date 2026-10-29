@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import { db, directoriesTable, categoriesTable } from "@workspace/db";
 import {
   CreateDirectoryBody,
@@ -13,18 +13,19 @@ const router: IRouter = Router();
 
 router.get("/directories", async (_req, res): Promise<void> => {
   const dirs = await db.select().from(directoriesTable).orderBy(directoriesTable.createdAt);
-  const result = await Promise.all(
-    dirs.map(async (d) => {
-      const cats = await db.select().from(categoriesTable).where(eq(categoriesTable.directoryId, d.id));
-      return {
-        id: d.id,
-        name: d.name,
-        year: d.year,
-        categoriesCount: cats.length,
-        createdAt: d.createdAt.toISOString(),
-      };
-    })
-  );
+  // One grouped count instead of loading every category of every directory.
+  const counts = await db
+    .select({ directoryId: categoriesTable.directoryId, count: count() })
+    .from(categoriesTable)
+    .groupBy(categoriesTable.directoryId);
+  const countByDir = new Map(counts.map((c) => [c.directoryId, Number(c.count)]));
+  const result = dirs.map((d) => ({
+    id: d.id,
+    name: d.name,
+    year: d.year,
+    categoriesCount: countByDir.get(d.id) ?? 0,
+    createdAt: d.createdAt.toISOString(),
+  }));
   res.json(result);
 });
 

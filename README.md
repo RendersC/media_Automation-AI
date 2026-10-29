@@ -97,9 +97,20 @@ corepack pnpm --filter @workspace/api-spec run codegen   # регенераци�
 
 ---
 
-## Деплой: фронтенд на Vercel + бэкенд на Railway
+## Деплой на Railway (одним сервисом — рекомендуется)
 
-Репозиторий — монорепо (фронт и бэк используют общий код `lib/*`), поэтому разносим не папками, а **двумя выкладками** из одного репозитория.
+`Dockerfile.railway` собирает и API, и веб-интерфейс; API сам отдаёт фронтенд (`STATIC_DIR`). Один домен, Vercel не нужен, cookie обычные (SameSite=Lax).
+
+1. New Project → **Deploy from GitHub repo** → этот репозиторий (подхватится `railway.json`, healthcheck `/api/healthz`).
+2. Добавь **Database → PostgreSQL**.
+3. Variables сервиса: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `OPENAI_API_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `COOKIE_SECURE=true`.
+4. Settings → Networking → **Generate Domain**. Открыть домен — это и есть приложение.
+
+> Держи **одну реплику**: фоновые задачи расшифровки живут в процессе. При перезапуске незавершённые сессии помечаются ошибкой (их нужно создать заново).
+
+## Альтернатива: фронтенд на Vercel + бэкенд на Railway
+
+> Бесплатный тариф Vercel (Hobby) — только для некоммерческого использования. Для заказчика проще вариант выше.
 
 ### Бэкенд → Railway
 1. New Project → **Deploy from GitHub repo** → выбери репозиторий. Railway подхватит `railway.json` (сборка по `Dockerfile.railway`).

@@ -1,9 +1,5 @@
-import OpenAI from "openai";
+import { openai, MODELS } from "./openai";
 import { logger } from "./logger";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 interface Category {
   id: number;
@@ -98,7 +94,7 @@ ${buildCategoryList(categories)}
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: MODELS.mini,
       max_tokens: 100,
       messages: [{ role: "user", content: prompt }],
       temperature: 0,
@@ -148,7 +144,7 @@ ${segmentsBlock}
 Включи в "results" все сюжеты; для служебных/нетематических — "codes": [].`;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: MODELS.main,
     max_tokens: 3000,
     messages: [{ role: "user", content: prompt }],
     temperature: 0,

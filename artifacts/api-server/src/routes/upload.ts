@@ -18,7 +18,8 @@ const upload = multer({
     if (allowed.includes(file.mimetype) || ["txt", "pdf", "docx"].includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error("Поддерживаются только форматы: PDF, DOCX, TXT"));
+      // status → the app error handler answers 400 with this message, not a 500.
+      cb(Object.assign(new Error("Поддерживаются только форматы: PDF, DOCX, TXT"), { status: 400 }));
     }
   },
 });

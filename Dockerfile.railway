@@ -17,8 +17,14 @@ RUN apt-get update \
 
 RUN corepack enable
 COPY . .
-RUN corepack pnpm install --frozen-lockfile --ignore-scripts
+# NODE_ENV=production would make pnpm skip devDependencies (esbuild, vite,
+# drizzle-kit) that the build and the startup schema push need.
+RUN NODE_ENV=development corepack pnpm install --frozen-lockfile --ignore-scripts
 RUN node artifacts/api-server/build.mjs
+# Build the web UI too and serve it from the API (one service, one origin:
+# no Vercel, no cross-site cookies). Leave VITE_API_URL unset → same-origin.
+RUN BASE_PATH=/ corepack pnpm --filter @workspace/media-analytics run build
+ENV STATIC_DIR=/app/artifacts/media-analytics/dist/public
 
 # Apply the schema (idempotent — "No changes detected" if already applied), then start.
 CMD ["sh", "-c", "corepack pnpm --filter @workspace/db run push && node --enable-source-maps artifacts/api-server/dist/index.mjs"]

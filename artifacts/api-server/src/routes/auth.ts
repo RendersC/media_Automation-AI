@@ -18,6 +18,40 @@ const router: IRouter = Router();
 
 const MIN_PASSWORD_LENGTH = 6;
 
+// Brute-force guard: per IP+email, at most LOGIN_MAX_FAILS failed attempts per
+// window. In-memory is enough for the single-instance deploy.
+const LOGIN_MAX_FAILS = 10;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const loginFails = new Map<string, { count: number; resetAt: number }>();
+
+function loginKey(ip: string | undefined, email: string): string {
+  return `${ip ?? "?"}|${email}`;
+}
+
+function isLoginBlocked(key: string): boolean {
+  const entry = loginFails.get(key);
+  if (!entry) return false;
+  if (entry.resetAt <= Date.now()) {
+    loginFails.delete(key);
+    return false;
+  }
+  return entry.count >= LOGIN_MAX_FAILS;
+}
+
+function recordLoginFail(key: string): void {
+  const now = Date.now();
+  const entry = loginFails.get(key);
+  if (!entry || entry.resetAt <= now) {
+    loginFails.set(key, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
+  } else {
+    entry.count += 1;
+  }
+  // Keep the map bounded.
+  if (loginFails.size > 10_000) {
+    for (const [k, v] of loginFails) if (v.resetAt <= now) loginFails.delete(k);
+  }
+}
+
 router.post("/auth/login", async (req, res): Promise<void> => {
   const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const password = typeof req.body?.password === "string" ? req.body.password : "";
@@ -26,12 +60,20 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
+  const key = loginKey(req.ip, email);
+  if (isLoginBlocked(key)) {
+    res.status(429).json({ error: "Слишком много попыток входа. Попробуйте через 15 минут" });
+    return;
+  }
+
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
   // Same generic message whether the email is unknown or the password is wrong.
   if (!user || user.isActive !== 1 || !verifyPassword(password, user.passwordHash)) {
+    recordLoginFail(key);
     res.status(401).json({ error: "Неверный email или пароль" });
     return;
   }
+  loginFails.delete(key);
 
   const { token, expiresAt } = await createSession(user.id);
   res.cookie(SESSION_COOKIE, token, sessionCookieOptions(expiresAt));

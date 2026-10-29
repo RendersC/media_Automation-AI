@@ -1,11 +1,7 @@
-import OpenAI from "openai";
+import { openai, MODELS } from "./openai";
 import { logger } from "./logger";
 import { type TranscriptCue, secondsToHHMMSS } from "./transcriptParser";
 import { parseBroadcastText } from "./broadcastParser";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export interface MergedSegment {
   title: string;
@@ -209,7 +205,7 @@ ${transcript}
   let content = "{}";
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: MODELS.main,
       max_tokens: 6000,
       temperature: 0.2,
       response_format: { type: "json_object" },
